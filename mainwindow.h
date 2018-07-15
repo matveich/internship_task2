@@ -22,8 +22,10 @@ public:
 
 private slots:
     void handle_button_show();
+    void handle_button_save_as();
     void upd_scroll_area(const QString&, const double&);
     void set_err_lbl(const QString&);
+    void set_info_lbl(const QString&);
 
 private:
     Ui::MainWindow *ui;
@@ -47,6 +49,8 @@ private:
 
     void set_to_default_state();
     void clear_layout(QLayout*);
+
+    void handle_button(const QString&);
 };
 
 #endif // MAINWINDOW_H

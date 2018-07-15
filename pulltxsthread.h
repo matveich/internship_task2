@@ -14,7 +14,10 @@
 #include <QJsonDocument>
 #include <QCoreApplication>
 #include <QtConcurrent/QtConcurrent>
+#include <QFileDialog>
 #include <cassert>
+
+#include "excel_writer.h"
 
 class PullTXsThread : public QObject
 {
@@ -33,11 +36,12 @@ public:
 
     ~PullTXsThread();
 
-    void run();
+    void run(const QString&);
 
 signals:
     void upd_gui_signal(const QString&, const double&);
     void pass_error(const QString&);
+    void pass_info(const QString&);
 
 private:
     QString address;
@@ -48,9 +52,11 @@ private:
     bool ign_zv_txs;
     bool inc_adr;
 
+    excel_writer writer;
+
     enum request_mode { NORMAL, INTERNAL };
 
-    void request(request_mode);
+    void request(request_mode, const QString&);
 
     QJsonObject request_page(int page_number, request_mode mode);
 
@@ -59,6 +65,13 @@ private:
     QString build_by_map(double&, QMap<QString, QVariant> const&);
 
     QString wei_str_to_eth(QString);
+
+    QStringList build_row_params(QMap<QString, QVariant> const&);
+
+    QString timestamp_to_qstr(long long timestamp);
+
+    void write_header_row();
+
 };
 
 #endif // PULLTXSTHREAD_H

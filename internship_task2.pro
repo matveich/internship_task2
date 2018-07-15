@@ -6,6 +6,7 @@
 
 QT       += core gui
 QT += network
+QT += widgets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -15,13 +16,18 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    pulltxsthread.cpp
+    pulltxsthread.cpp \
+    excel_writer.cpp
 
 HEADERS  += mainwindow.h \
-    pulltxsthread.h
+    pulltxsthread.h \
+    excel_writer.h
 
 FORMS    += mainwindow.ui
 
 CONFIG += console
 
 CONFIG += c++11
+
+RESOURCES += resources.qrc
+

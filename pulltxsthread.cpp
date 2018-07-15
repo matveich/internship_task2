@@ -21,13 +21,40 @@ PullTXsThread::~PullTXsThread() {
     wait();
 }
 
-void PullTXsThread::run() {
-    request(NORMAL);
+void PullTXsThread::run(const QString& filename) {
+    if (!filename.isEmpty()) {
+        try {
+            new(&writer)excel_writer(filename);
+        }
+        catch (const std::runtime_error& e) {
+            emit pass_error(e.what());
+            return;
+        }
+        pass_info("Start downloading. Please, wait...");
+        writer.write_headers();
+        write_header_row();
+    }
+    request(NORMAL, filename);
     if (!ign_int_txs)
-        request(INTERNAL);
+        request(INTERNAL, filename);
+    if (!filename.isEmpty()) {
+        writer.write_endings();
+        pass_info("Downloading is finished.");
+    }
 }
 
-void PullTXsThread::request(request_mode mode) {
+void PullTXsThread::write_header_row() {
+    QStringList list;
+    list.append("Date/time");
+    if (inc_adr)
+        list.append("Another address");
+    list.append("Amount (eth)");
+    if (!ign_coms)
+        list.append("Commission (eth)");
+    writer.write_row(list);
+}
+
+void PullTXsThread::request(request_mode mode, const QString& filename) {
     int page_number = 1;
     QJsonObject req_result;
     //if (mode == NORMAL)
@@ -54,32 +81,63 @@ void PullTXsThread::request(request_mode mode) {
             double input_tx_sum = 0;
             if (fields["isError"].toInt() != 0 || (ign_zv_txs && fields["value"].toInt() == 0))
                 continue;
-            QString res = build_by_map(input_tx_sum, fields);
-            emit upd_gui_signal(res, input_tx_sum);
+            if (filename.isEmpty()) {
+                QString res = build_by_map(input_tx_sum, fields);
+                emit upd_gui_signal(res, input_tx_sum);
+            }
+            else {
+                auto res = build_row_params(fields);
+                writer.write_row(res);
+            }
         }
     }
+}
+
+QString PullTXsThread::timestamp_to_qstr(long long timestamp) {
+    QDateTime dt;
+    dt.setTime_t(timestamp);
+    return dt.toString(Qt::SystemLocaleShortDate);
+}
+
+QStringList PullTXsThread::build_row_params(const QMap<QString, QVariant> &map) {
+    auto value_str = map["value"].toString();
+    double value = wei_str_to_eth(value_str).toDouble();
+    QStringList out;
+    out.append(timestamp_to_qstr(map["timeStamp"].toLongLong()));
+    if (inc_adr) {
+        out.append(QString::compare(map["from"].toString(), address, Qt::CaseInsensitive) == 0
+                ? map["to"].toString() : map["from"].toString());
+    }
+    out.append(QString::number(value, 'g', 12));
+    if (!ign_coms) {
+        auto gas_price_str = map["gasPrice"].toString();
+        out.append(QString::number(wei_str_to_eth(gas_price_str).toDouble() *
+                                   map["gasUsed"].toLongLong(), 'g', 12));
+    }
+    return out;
 }
 
 QString PullTXsThread::build_by_map(double& inp_sum, QMap<QString, QVariant> const& map) {
     auto value_str = map["value"].toString();
     double value = wei_str_to_eth(value_str).toDouble();
-    if (map["to"].toString() == address)
+    if (QString::compare(map["to"].toString(), address, Qt::CaseInsensitive) == 0) {
         inp_sum = value;
+    }
     QString out;
 
-    long long timestamp = map["timeStamp"].toLongLong();
-    QDateTime dt;
-    dt.setTime_t(timestamp);
-    out = "Date/time: " + dt.toString(Qt::SystemLocaleShortDate) + "\n" +
-          "Transaction type: " + (map["from"].toString() == address ? "send" : "receive") + ".\n";
+    QString str_timestamp = timestamp_to_qstr(map["timeStamp"].toLongLong());
+    out = "Date/time: " + str_timestamp + "\n" +
+          "Transaction type: " + (QString::compare(map["from"].toString(), address, Qt::CaseInsensitive) == 0
+            ? "send" : "receive") + ".\n";
     if (inc_adr) {
         out += "Another address: " +
-                (map["from"].toString() == address ? map["to"].toString() : map["from"].toString()) + "\n";
+                (QString::compare(map["from"].toString(), address, Qt::CaseInsensitive) == 0
+                ? map["to"].toString() : map["from"].toString()) + "\n";
     }
     out += "Amount: " + QString::number(value, 'g', 12) + " eth.\n";
     if (!ign_coms) {
         auto gas_price_str = map["gasPrice"].toString();
-          out += "Comission: " + QString::number(wei_str_to_eth(gas_price_str).toDouble() *
+          out += "Commission: " + QString::number(wei_str_to_eth(gas_price_str).toDouble() *
                   map["gasUsed"].toLongLong(), 'g', 12) + " eth.\n";
     }
     out += "\n";

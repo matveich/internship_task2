@@ -14,7 +14,9 @@ MainWindow::MainWindow(QWidget *parent) :
     income_total_label("Incoming Txs Total: ")
 {
     ui->setupUi(this);
-    connect(ui->button_show, SIGNAL(pressed()), this, SLOT(handle_button_show()));
+    setWindowIcon(QIcon(":/eth.png"));
+    connect(ui->button_show, SIGNAL(released()), this, SLOT(handle_button_show()));
+    connect(ui->button_save_as, SIGNAL(released()), this, SLOT(handle_button_save_as()));
 
     scroll_widget->setLayout(layout);
     ui->scrollArea->setWidget(scroll_widget);
@@ -27,6 +29,19 @@ MainWindow::MainWindow(QWidget *parent) :
 }
 
 void MainWindow::handle_button_show() {
+   handle_button("");
+}
+
+void MainWindow::handle_button_save_as() {
+    QString fileName = QFileDialog::getSaveFileName(this,
+           tr("Save Transaction History"), "",
+           tr("Excel (*.xls);;All Files (*)"));
+    if (fileName.isEmpty())
+           return;
+    handle_button(fileName);
+}
+
+void MainWindow::handle_button(const QString& filename) {
     set_to_default_state();
     const QString address = ui->textfield_address->text();
     new(&pull_thr)PullTXsThread(address, ui->checkBox_ign_internal->isChecked(),
@@ -38,7 +53,9 @@ void MainWindow::handle_button_show() {
             this, SLOT(upd_scroll_area(QString, double)));
     connect(&pull_thr, SIGNAL(pass_error(QString)),
             this, SLOT(set_err_lbl(QString)));
-    pull_thread_f = QtConcurrent::run(&pull_thr, &PullTXsThread::run);
+    connect(&pull_thr, SIGNAL(pass_info(QString)),
+            this, SLOT(set_info_lbl(QString)));
+    pull_thread_f = QtConcurrent::run(&pull_thr, &PullTXsThread::run, filename);
 }
 
 void MainWindow::set_to_default_state() {
@@ -72,7 +89,14 @@ void MainWindow::set_err_lbl(const QString &msg) {
     if (msg.isEmpty())
         return;
     ui->label_error_msg->setText(msg);
-    set_to_default_state();
+    //set_to_default_state();
+}
+
+void MainWindow::set_info_lbl(const QString &msg) {
+    if (msg.isEmpty())
+        return;
+    ui->label_info_msg->setText(msg);
+    //set_to_default_state();
 }
 
 void MainWindow::upd_total_label(long long _total) {
