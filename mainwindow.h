@@ -4,12 +4,9 @@
 #include <QMainWindow>
 #include <QScreen>
 #include <QDebug>
-#include <QNetworkAccessManager>
-#include <iostream>
+#include <QLabel>
+#include <QVBoxLayout>
 #include "pulltxsthread.h"
-
-using std::cin;
-using std::cout;
 
 namespace Ui {
 class MainWindow;
@@ -25,10 +22,31 @@ public:
 
 private slots:
     void handle_button_show();
+    void upd_scroll_area(const QString&, const double&);
+    void set_err_lbl(const QString&);
 
 private:
     Ui::MainWindow *ui;
+
+    int scroll_area_padding;
+    QVBoxLayout *layout;
+    QWidget *scroll_widget;
+
+    long long total;
+    double income_total;
+
+    QString total_label;
+    QString income_total_label;
+
     QNetworkAccessManager manager;
+    PullTXsThread pull_thr;
+    QFuture<void> pull_thread_f;
+
+    void upd_total_label(long long);
+    void upd_income_label(double);
+
+    void set_to_default_state();
+    void clear_layout(QLayout*);
 };
 
 #endif // MAINWINDOW_H
