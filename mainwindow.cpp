@@ -63,6 +63,7 @@ void MainWindow::set_to_default_state() {
         pull_thr.is_terminated = true;
     ui->label_total->setText(total_label + "0");
     ui->label_txs_count->setText(income_total_label + "0 eth");
+    ui->label_error_msg->setText("");
     total = 0;
     income_total = 0;
     clear_layout(layout);

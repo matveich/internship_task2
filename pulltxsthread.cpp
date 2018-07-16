@@ -79,7 +79,7 @@ void PullTXsThread::request(request_mode mode, const QString& filename) {
         for (int i = 0; i < arr.count(); ++i) {
             fields = arr[i].toMap();
             double input_tx_sum = 0;
-            if (fields["isError"].toInt() != 0 || (ign_zv_txs && fields["value"].toInt() == 0))
+            if (ign_zv_txs && fields["value"].toInt() == 0)
                 continue;
             if (filename.isEmpty()) {
                 QString res = build_by_map(input_tx_sum, fields);
